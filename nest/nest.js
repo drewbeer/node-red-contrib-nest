@@ -25,10 +25,10 @@ module.exports = function(RED) {
         var node = this;
         //var data;
         var nestheader = {};
-        
+
         if (credentials.accesstoken) {
             node.on("input", function(msg) {
-                var outmsg = { 
+                var outmsg = {
                     topic: msg.topic
                 };
                 var nesturl = 'https://developer-api.nest.com';
@@ -44,7 +44,7 @@ module.exports = function(RED) {
                         break;
                     case 'cameras':
                         nesturl = nesturl + '/devices/cameras';
-                        break;                        
+                        break;
                 }
                 if (device_id) {
                     nesturl = nesturl + '/' + device_id;
@@ -59,7 +59,7 @@ module.exports = function(RED) {
                             try {
                                  data = JSON.parse( chunk );
                                  outmsg.payload = data;
-                                 node.send(outmsg);  
+                                 node.send(outmsg);
                             } catch (e) {
                                  var esmsg = chunk.toString();
                                  var parts = esmsg.substr(0).split("\n"),
@@ -67,18 +67,18 @@ module.exports = function(RED) {
                                      //data = [],
                                      i = 0,
                                      line = '';
-                                    
+
                                  for (; i < parts.length; i++) {
                                      line = parts[i].replace(/^(\s|\u00A0)+|(\s|\u00A0)+$/g, '');
                                      if (line.indexOf('event') == 0) {
                                        eventType = line.replace(/event:?\s*/, '');
                                      } else if (line.indexOf('data') == 0) {
                                        data = line.replace(/data:?\s*/, '');
-                                     } 
+                                     }
                                  }
-                                 // TODO parse out "path" and use for topic 
+                                 // TODO parse out "path" and use for topic
                                  outmsg.payload = data;
-                                 node.send(outmsg);                           
+                                 node.send(outmsg);
                             }
                         })
                         .on('error', function(error) {
@@ -86,7 +86,7 @@ module.exports = function(RED) {
                             //TODO: not sure how to send error downstream or for debug tab in node-red
                             outmsg.error = error;
                             node.send(outmsg);
-                        }); 
+                        });
                 } else {
                     nest({ method: 'GET', url: nesturl, headers: nestheader }, function ( error, response, body ){
                         var data;
@@ -96,7 +96,7 @@ module.exports = function(RED) {
                             try {
                                 data = JSON.parse( body );
                                 outmsg.payload = data;
-                                node.send(outmsg);  
+                                node.send(outmsg);
                             } catch (e) {
                                 console.log('[nest] caught the following error parsing response: ' + e);
                                 var esmsg = body.toString();
@@ -105,34 +105,34 @@ module.exports = function(RED) {
                                     data = [],
                                     i = 0,
                                     line = '';
-                                    
+
                                 for (; i < parts.length; i++) {
                                     line = parts[i].replace(/^(\s|\u00A0)+|(\s|\u00A0)+$/g, '');
                                     if (line.indexOf('event') == 0) {
                                       eventType = line.replace(/event:?\s*/, '');
                                     } else if (line.indexOf('data') == 0) {
                                       data = line.replace(/data:?\s*/, '');
-                                    } 
+                                    }
                                 }
-                                // TODO parse out "path" and use for topic 
+                                // TODO parse out "path" and use for topic
                                 outmsg.payload = data;
-                                node.send(outmsg);                          
+                                node.send(outmsg);
                             }
                         }
                     });
                 }
             });
-        } 
+        }
     }
     RED.nodes.registerType("nest request",NestRequestNode);
 
     // a RED http endpoint (express really) to call to get around same origin browser restrictions
-    RED.httpAdmin.get('/nest-credentials/:id/:cid/:csec/:pin/auth', function(req, res){
+    RED.httpAdmin.get('nest-credentials/:id/:cid/:csec/:pin/auth', function(req, res){
         // if the creds are good, try and exchange them for an access token
         if (  req.params.cid && req.params.csec && req.params.pin ) {
             // call nest API to exchange the one time code for an access token
-            var url = 'https://api.home.nest.com/oauth2/access_token?client_id=' + req.params.cid + '&code=' + req.params.pin + '&client_secret=' + req.params.csec + '&grant_type=authorization_code'; 
-            
+            var url = 'https://api.home.nest.com/oauth2/access_token?client_id=' + req.params.cid + '&code=' + req.params.pin + '&client_secret=' + req.params.csec + '&grant_type=authorization_code';
+
             nest.post(url,function(error, response, body) {
                 if (error){
                     util.log('[nest] Error in nest post: ' + error);
@@ -141,7 +141,7 @@ module.exports = function(RED) {
                     util.log('[nest] Unauthorized: ' + util.inspect(body) );
                     res.send("Unauthorised");
                 } else {
-                    //add access token to creds  
+                    //add access token to creds
                     try {
                         var t = JSON.parse( body );
                         if ( t.access_token ) {
@@ -154,11 +154,11 @@ module.exports = function(RED) {
                         console.log ( e );
                     }
                 }
-            });    
+            });
         } else{
             util.log('[nest] missing required creds, cannot auth');
             res.send("Error");
-        }                    
+        }
     });
 
     function NestStatus(n) {
@@ -175,7 +175,7 @@ module.exports = function(RED) {
             };
             var err = null;
             //static node config trumps incomming message parameters
-            if ( !state && msg.payload.away ) { 
+            if ( !state && msg.payload.away ) {
                 state = msg.payload.away;
             }
             if ( !sid && msg.payload.structure_id ) {
@@ -184,17 +184,17 @@ module.exports = function(RED) {
             //build URL and HTTP PUT form data
             var nesturl = 'https://developer-api.nest.com/structures/' + sid + '.json?auth=' + credentials.accesstoken;
             var nestheader = { "Accept" : "application/json" };
-            var nestoptions = { 
+            var nestoptions = {
                     method: 'PUT',
-                    url: nesturl, 
+                    url: nesturl,
                     followAllRedirects: true,
-                    headers: nestheader, 
+                    headers: nestheader,
                     form: JSON.stringify({ "away": state })
             };
             console.log( nesturl );
             console.log( nestoptions );
 
-            if ( (state == "home" || state == "away") && sid) {           
+            if ( (state == "home" || state == "away") && sid) {
                 // TODO - check proper error handling
                 nest( nestoptions, function(error, response, body) {
                     if (error){
@@ -213,13 +213,13 @@ module.exports = function(RED) {
                         outmsg.error = 'Unknown response to post to structure';
                         outmsg.payload = response.statusCode;
                     }
-                    node.send(outmsg);  
-                });    
+                    node.send(outmsg);
+                });
             } else {
                 util.log('[nest] undefined away state and/or structure ID, skipping calls to nest');
                 err = new Error("undefined away state");
                 outmsg.payload = err;
-                node.send(outmsg);  
+                node.send(outmsg);
             }
         });
     }
@@ -246,11 +246,11 @@ module.exports = function(RED) {
                 nestform.target_temperature_c = target;
             } else if ( scale == "f" && target ) {
                 nestform.target_temperature_f = target;
-            } else if ( !target && msg.payload.target_temperature_c ) { 
+            } else if ( !target && msg.payload.target_temperature_c ) {
                 target = msg.payload.target_temperature_c;
                 scale = "c";
                 nestform.target_temperature_c = target;
-            } else if ( !target && msg.payload.target_temperature_f ) { 
+            } else if ( !target && msg.payload.target_temperature_f ) {
                 target = msg.payload.target_temperature_f;
                 scale = "f";
                 nestform.target_temperature_f = target;
@@ -267,13 +267,13 @@ module.exports = function(RED) {
             console.log( nesturl );
             console.log( util.inspect(nestform) );
 
-            
-            if ( target && scale && tid) {           
+
+            if ( target && scale && tid) {
                 // TODO - check proper error handling
-                nest( { 
+                nest( {
                     method: 'PUT', //or PATCH maybe???
-                    url: nesturl, 
-                    headers: nestheader, 
+                    url: nesturl,
+                    headers: nestheader,
                     form: JSON.stringify(nestform),
                     followAllRedirects: true
                 }, function(error, response, body) {
@@ -293,13 +293,13 @@ module.exports = function(RED) {
                         outmsg.error = 'Unknown response to post to structure';
                         outmsg.payload = response.statusCode;
                     }
-                    node.send(outmsg);  
-                });    
+                    node.send(outmsg);
+                });
             } else {
                 util.log('[nest] undefined target temp and/or device ID, skipping calls to nest');
                 err = new Error("undefined temp or device");
                 outmsg.payload = err;
-                node.send(outmsg);  
+                node.send(outmsg);
             }
         });
     }
