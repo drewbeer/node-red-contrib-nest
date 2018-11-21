@@ -127,7 +127,7 @@ module.exports = function(RED) {
     RED.nodes.registerType("nest request",NestRequestNode);
 
     // a RED http endpoint (express really) to call to get around same origin browser restrictions
-    RED.httpAdmin.get('nest-credentials/:id/:cid/:csec/:pin/auth', function(req, res){
+    RED.httpAdmin.get('/nest-credentials/:id/:cid/:csec/:pin/auth', function(req, res){
         // if the creds are good, try and exchange them for an access token
         if (  req.params.cid && req.params.csec && req.params.pin ) {
             // call nest API to exchange the one time code for an access token
